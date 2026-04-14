@@ -1,0 +1,51 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+dist/
+*.egg-info/
+
+# AI Models (large files)
+ai-engine/app/models/*.pkl
+ai-engine/app/models/*.h5
+ai-engine/app/models/*.joblib
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Docker
+.dockerignore
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sql.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.pem
+*.key
+*.crt

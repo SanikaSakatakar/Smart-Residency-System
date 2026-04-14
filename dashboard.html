@@ -1,0 +1,595 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Security Gate — SmartRes</title>
+<link rel="stylesheet" href="../css/dashboard.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+/* Entry mode tabs */
+.entry-tabs{display:flex;border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:16px}
+.entry-tab{flex:1;padding:9px;text-align:center;font-size:.8rem;font-weight:600;cursor:pointer;color:var(--muted2);background:var(--surface);border:none;font-family:inherit;transition:.15s}
+.entry-tab.active{background:var(--blue-dim2);color:var(--blue-light)}
+/* QR scanner */
+.scanner-wrap{position:relative;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:4/3;max-width:320px;margin:0 auto}
+.scanner-wrap video,.scanner-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.scanner-wrap canvas{display:none}
+.scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.scan-frame{width:60%;height:60%;border:3px solid var(--green);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);position:relative}
+.scan-corner{position:absolute;width:18px;height:18px;border-color:var(--blue-light);border-style:solid}
+.sc-tl{top:-2px;left:-2px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.sc-tr{top:-2px;right:-2px;border-width:3px 3px 0 0;border-radius:0 4px 0 0}
+.sc-bl{bottom:-2px;left:-2px;border-width:0 0 3px 3px;border-radius:0 0 0 4px}
+.sc-br{bottom:-2px;right:-2px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scan-line{position:absolute;left:5%;right:5%;height:2px;background:linear-gradient(90deg,transparent,var(--green),transparent);animation:scanline 2s ease-in-out infinite;top:50%}
+@keyframes scanline{0%,100%{top:10%;opacity:.5}50%{top:90%;opacity:1}}
+.scan-status{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:.75rem;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.scan-status.found{color:var(--green)}
+/* Photo capture */
+.photo-preview-wrap{width:72px;height:72px;border-radius:10px;background:var(--surface2);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.photo-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;border:2px solid var(--border);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div><div class="grid-mesh"></div>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-mark">🛡</div>
+    <div><div class="sb-title">Smart<span>Res</span></div><div class="sb-subtitle">Security Gate</div></div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-sect">Gate Control</div>
+    <button class="nav-item active" id="n-gate" onclick="go('gate',this,loadGate)"><div class="nav-ic"><i class="fa fa-door-open"></i></div>Gate Dashboard</button>
+    <button class="nav-item" id="n-inside" onclick="go('inside',this,loadInside)"><div class="nav-ic"><i class="fa fa-users"></i></div>Currently Inside</button>
+    <button class="nav-item" id="n-log" onclick="go('log',this,loadLog)"><div class="nav-ic"><i class="fa fa-clock-rotate-left"></i></div>Entry Log</button>
+    <div class="nav-sect">Tools</div>
+    <button class="nav-item" id="n-profile" onclick="go('profile',this,loadProfile)"><div class="nav-ic"><i class="fa fa-user-circle"></i></div>My Profile</button>
+  </nav>
+  <div class="sb-foot">
+    <div class="sb-user"><div class="sb-av">GD</div><div><div class="sb-uname">Guard</div><div class="sb-urole">Security</div></div></div>
+    <button class="btn-logout" onclick="logout()"><i class="fa fa-arrow-right-from-bracket"></i> Sign Out</button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-left"><span class="topbar-title" id="page-title">Gate Dashboard</span></div>
+    <div class="topbar-right">
+      <span class="tb-clock" id="clock"></span>
+      <div class="tb-notif"><i class="fa fa-bell"></i><div class="tb-dot" id="notif-dot" style="display:none"></div></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ── GATE DASHBOARD ── -->
+    <div class="page-sec active" id="sec-gate">
+      <div class="ph"><h2>Gate Dashboard 🛡</h2><p>Log entries, scan passes, manage exits</p></div>
+      <div class="stats-row" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat"><div class="stat-ic green"><i class="fa fa-users"></i></div><div class="stat-val" id="g-inside">—</div><div class="stat-lbl">Inside Now</div></div>
+        <div class="stat"><div class="stat-ic blue"><i class="fa fa-calendar-day"></i></div><div class="stat-val" id="g-today">—</div><div class="stat-lbl">Entries Today</div></div>
+        <div class="stat"><div class="stat-ic gold"><i class="fa fa-clock"></i></div><div class="stat-val" id="g-pending">—</div><div class="stat-lbl">Pending Passes</div></div>
+      </div>
+
+      <div class="g2">
+        <!-- Entry Card — dual mode: QR + Photo -->
+        <div class="card">
+          <div class="card-head"><div class="card-title"><div class="card-ic"><i class="fa fa-person-walking-arrow-right"></i></div>Log Visitor Entry</div></div>
+          <div class="card-body">
+            <div class="entry-tabs">
+              <button class="entry-tab active" id="tab-photo" onclick="switchEntryMode('photo')"><i class="fa fa-camera"></i> Photo Entry</button>
+              <button class="entry-tab" id="tab-qr" onclick="switchEntryMode('qr')"><i class="fa fa-qrcode"></i> QR Scan</button>
+              <button class="entry-tab" id="tab-manual" onclick="switchEntryMode('manual')"><i class="fa fa-keyboard"></i> Manual QR</button>
+            </div>
+
+            <!-- PHOTO mode -->
+            <div id="mode-photo">
+              <div class="fg"><label>Visitor Name <span style="color:#f87171">*</span></label><input class="input" id="ent-name" placeholder="Full name"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="fg"><label>Phone</label><input class="input" id="ent-phone" placeholder="+91…"></div>
+                <div class="fg"><label>Vehicle No.</label><input class="input" id="ent-vehicle" placeholder="MH 12…"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="fg">
+                  <label>Host Flat <span style="color:#f87171">*</span></label>
+                  <select class="select" id="ent-flat"><option value="">— Select flat —</option></select>
+                </div>
+                <div class="fg">
+                  <label>Purpose</label>
+                  <select class="select" id="ent-purpose">
+                    <option value="Guest">Guest</option><option value="Delivery">Delivery</option>
+                    <option value="Technician">Technician</option><option value="Housekeeping">Housekeeping</option>
+                    <option value="Cab / Driver">Cab / Driver</option><option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fg">
+                <label>Visitor Photo</label>
+                <div style="display:flex;align-items:flex-start;gap:10px">
+                  <div class="photo-preview-wrap" id="ent-photo-preview"><i class="fa fa-user" style="color:var(--muted);font-size:1.5rem"></i></div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    <button class="btn btn-ghost btn-sm" onclick="openPhotoCapture()" id="btn-take-photo"><i class="fa fa-camera"></i> Take Photo</button>
+                    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ent-photo-file').click()"><i class="fa fa-upload"></i> Upload</button>
+                    <input type="file" id="ent-photo-file" accept="image/*" capture="environment" style="display:none" onchange="handlePhotoFile(this)">
+                  </div>
+                </div>
+              </div>
+              <button class="btn btn-primary btn-fw" onclick="submitEntry()"><i class="fa fa-check"></i> Log Entry</button>
+              <div id="ent-result" style="margin-top:10px"></div>
+            </div>
+
+            <!-- QR CAMERA mode -->
+            <div id="mode-qr" style="display:none">
+              <div class="scanner-wrap" id="scanner-wrap">
+                <video id="cam-video" autoplay playsinline muted></video>
+                <canvas id="cam-canvas"></canvas>
+                <div class="scan-overlay">
+                  <div class="scan-frame">
+                    <div class="scan-corner sc-tl"></div><div class="scan-corner sc-tr"></div>
+                    <div class="scan-corner sc-bl"></div><div class="scan-corner sc-br"></div>
+                    <div class="scan-line"></div>
+                  </div>
+                </div>
+                <div class="scan-status" id="scan-status">Point camera at QR code</div>
+              </div>
+              <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center">
+                <button class="btn btn-primary btn-sm" onclick="startQRCamera()" id="btn-start-cam"><i class="fa fa-camera"></i> Start Camera</button>
+                <button class="btn btn-ghost btn-sm" onclick="stopQRCamera()" id="btn-stop-cam" style="display:none"><i class="fa fa-stop"></i> Stop</button>
+              </div>
+              <div id="qr-scan-result" style="margin-top:12px"></div>
+            </div>
+
+            <!-- MANUAL QR mode -->
+            <div id="mode-manual" style="display:none">
+              <div class="fg"><label>QR Code String</label><input class="input" id="manual-qr" placeholder="Paste QR code string from pass…" onkeydown="if(event.key==='Enter')processManualQR()"></div>
+              <button class="btn btn-primary btn-fw" onclick="processManualQR()"><i class="fa fa-check"></i> Process Entry</button>
+              <div id="manual-result" style="margin-top:12px"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log Exit Card -->
+        <div class="card">
+          <div class="card-head"><div class="card-title"><div class="card-ic" style="background:var(--red-dim);color:#f87171"><i class="fa fa-arrow-right-from-bracket"></i></div>Log Exit</div></div>
+          <div class="card-body">
+            <div class="fg">
+              <label>Select Visitor Inside</label>
+              <select class="select" id="exit-select" onchange="document.getElementById('exit-id').value=this.value" style="margin-bottom:10px">
+                <option value="">— Select visitor by name —</option>
+              </select>
+            </div>
+            <div class="fg"><label>Or Enter Visitor ID</label><input class="input" id="exit-id" type="number" placeholder="Visitor ID" onkeydown="if(event.key==='Enter')processExit()"></div>
+            <button class="btn btn-danger btn-fw" onclick="processExit()"><i class="fa fa-arrow-right-from-bracket"></i> Log Exit</button>
+            <div id="exit-result" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live table -->
+      <div class="card" style="margin-top:16px">
+        <div class="card-head">
+          <div class="card-title"><div class="card-ic" style="background:var(--green-dim);color:var(--green)"><i class="fa fa-circle" style="font-size:.5rem"></i></div>Currently Inside <span style="font-size:.72rem;color:var(--muted);font-weight:400;margin-left:6px">auto-refreshes</span></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadGate()"><i class="fa fa-rotate-right"></i></button>
+        </div>
+        <div class="card-body np" id="inside-live"></div>
+      </div>
+    </div>
+
+    <!-- ── CURRENTLY INSIDE ── -->
+    <div class="page-sec" id="sec-inside">
+      <div class="ph"><h2>Currently Inside</h2><p>All visitors on premises</p></div>
+      <div class="card"><div class="card-body np" id="inside-tbl"></div></div>
+    </div>
+
+    <!-- ── ENTRY LOG ── -->
+    <div class="page-sec" id="sec-log">
+      <div class="ph-row">
+        <div><h2>Entry Log</h2><p>Complete visitor history</p></div>
+        <button class="btn btn-ghost btn-sm" onclick="loadLog()"><i class="fa fa-rotate-right"></i></button>
+      </div>
+      <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+        <div class="stat"><div class="stat-ic green"><i class="fa fa-users"></i></div><div class="stat-val" id="lg-total">—</div><div class="stat-lbl">Total</div></div>
+        <div class="stat"><div class="stat-ic blue"><i class="fa fa-circle" style="font-size:.5rem"></i></div><div class="stat-val" id="lg-inside">—</div><div class="stat-lbl">Inside</div></div>
+        <div class="stat"><div class="stat-ic gold"><i class="fa fa-arrow-right-from-bracket"></i></div><div class="stat-val" id="lg-exited">—</div><div class="stat-lbl">Exited</div></div>
+        <div class="stat"><div class="stat-ic purple"><i class="fa fa-clock"></i></div><div class="stat-val" id="lg-pending">—</div><div class="stat-lbl">Pending</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head" style="flex-wrap:wrap;gap:8px">
+          <div class="tabs" id="log-tabs">
+            <button class="tab-btn active" onclick="filterLog('ALL',this)">All</button>
+            <button class="tab-btn" onclick="filterLog('INSIDE',this)">Inside</button>
+            <button class="tab-btn" onclick="filterLog('EXITED',this)">Exited</button>
+            <button class="tab-btn" onclick="filterLog('PENDING',this)">Pending</button>
+          </div>
+          <input class="input" id="log-search" placeholder="🔍 Name, flat, phone…" oninput="filterLog(null,null)" style="width:220px;margin-left:auto">
+        </div>
+        <div class="card-body np" id="log-tbl"></div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE ── -->
+    <div class="page-sec" id="sec-profile">
+      <div class="ph"><h2>My Profile</h2><p>Update your account</p></div>
+      <div class="card" style="max-width:500px">
+        <div class="card-body">
+          <div class="fg"><label>Full Name</label><input class="input" id="sp-name" placeholder="Full name"></div>
+          <div class="fg"><label>Phone</label><input class="input" id="sp-phone" placeholder="Phone number"></div>
+          <button class="btn btn-primary btn-fw" onclick="saveProfile()"><i class="fa fa-save"></i> Save</button>
+          <hr style="border:none;border-top:1px solid var(--border);margin:16px 0">
+          <div class="fg"><label>Current Password</label><input class="input" id="sp-cur" type="password"></div>
+          <div class="fg"><label>New Password</label><input class="input" id="sp-new" type="password"></div>
+          <button class="btn btn-primary btn-fw" onclick="changePassword()"><i class="fa fa-key"></i> Change Password</button>
+          <div id="sp-msg" style="margin-top:10px"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Photo capture modal -->
+<div id="_photo-modal-wrap"></div>
+
+<!-- Photo viewer -->
+<div id="photo-viewer" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;cursor:pointer" onclick="this.style.display='none'">
+  <div style="text-align:center">
+    <img id="photo-viewer-img" style="max-width:90vw;max-height:80vh;border-radius:12px">
+    <div id="photo-viewer-name" style="color:#fff;margin-top:12px;font-size:.9rem;font-weight:600"></div>
+    <div style="color:rgba(255,255,255,.4);font-size:.75rem;margin-top:4px">Tap to close</div>
+  </div>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+checkAuth(['ROLE_SECURITY','ROLE_ADMIN']); setupUser(); startClock(); connectWS(wsHandler);
+
+let _camStream=null, _scanning=false, _lastScanned='', _processingQR=false, _lastFrameTime=0;
+let _capturedPhoto=null, _photoCamStream=null, _allLog=[], _allFlats=[];
+const _scanSmall=document.createElement('canvas'); _scanSmall.width=400; _scanSmall.height=400;
+const _ctxSmall=_scanSmall.getContext('2d',{willReadFrequently:true});
+
+function go(id,btn,fn){
+  document.querySelectorAll('.page-sec').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const titles={gate:'Gate Dashboard',inside:'Currently Inside',log:'Entry Log',profile:'My Profile'};
+  document.getElementById('page-title').textContent=titles[id]||id;
+  if(id!=='gate') stopQRCamera();
+  if(fn) fn();
+}
+
+// ─── ENTRY MODE SWITCHING ─────────────────────────────
+function switchEntryMode(mode){
+  ['photo','qr','manual'].forEach(m=>{
+    document.getElementById('tab-'+m).classList.toggle('active',m===mode);
+    document.getElementById('mode-'+m).style.display=m===mode?'block':'none';
+  });
+  if(mode!=='qr') stopQRCamera();
+}
+
+// ─── GATE STATS + LIVE TABLE ─────────────────────────
+async function loadGate(){
+  try{
+    const [visitors, flatsData] = await Promise.all([
+      get('/security/current-visitors').catch(()=>[]),
+      _allFlats.length ? Promise.resolve(_allFlats) : get('/security/flats').catch(()=>[])
+    ]);
+    const inside=(visitors||[]).filter(v=>v.status==='INSIDE');
+    if(flatsData?.length){ _allFlats=flatsData; populateFlatSelect(); }
+
+    const allToday=await get('/security/all-visitors').catch(()=>[]);
+    const today=(allToday||[]).filter(v=>{ if(!v.entryTime) return false; const d=new Date(v.entryTime),n=new Date(); return d.toDateString()===n.toDateString(); });
+    document.getElementById('g-inside').textContent=inside.length;
+    document.getElementById('g-today').textContent=today.length;
+    document.getElementById('g-pending').textContent=(visitors||[]).filter(v=>v.status==='PENDING').length;
+
+    // Exit dropdown
+    const sel=document.getElementById('exit-select');
+    sel.innerHTML='<option value="">— Select visitor —</option>';
+    inside.forEach(v=>{ const o=document.createElement('option'); o.value=v.id; o.textContent=`#${v.id} · ${v.visitorName||'?'} → Flat ${v.hostFlat?.flatNumber||'?'}`; sel.appendChild(o); });
+
+    renderInsideLive(inside);
+  }catch(e){ document.getElementById('inside-live').innerHTML=`<div class="alert alert-err">${e.message}</div>`; }
+}
+
+function populateFlatSelect(){
+  const sel=document.getElementById('ent-flat');
+  sel.innerHTML='<option value="">— Select flat —</option>';
+  _allFlats.filter(f=>f.status==='OCCUPIED').forEach(f=>{
+    const o=document.createElement('option'); o.value=f.id;
+    o.textContent=`Flat ${f.flatNumber}${f.resident?' — '+f.resident.fullName:''}`;
+    sel.appendChild(o);
+  });
+}
+
+function renderInsideLive(visitors){
+  const el=document.getElementById('inside-live');
+  if(!visitors.length){ el.innerHTML='<div class="empty"><div class="empty-ic">🏪</div><div class="empty-lbl">No visitors inside right now</div></div>'; return; }
+  const rows=visitors.map(v=>[
+    v.visitorPhotoUrl?`<img src="${v.visitorPhotoUrl}" class="photo-thumb" onclick="viewPhoto('${v.visitorPhotoUrl}','${(v.visitorName||'').replace(/'/g,'')}')">`
+      :`<div style="width:40px;height:40px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center"><i class="fa fa-user" style="color:var(--muted)"></i></div>`,
+    `<strong>${v.visitorName||'—'}</strong>`,
+    v.visitorPhone||'—',
+    v.hostFlat?`<span class="mono">Flat ${v.hostFlat.flatNumber}</span>`:'—',
+    v.purpose||'—', fmtDT(v.entryTime),
+    `<button class="btn btn-danger btn-xs" onclick="quickExit(${v.id},'${(v.visitorName||'').replace(/'/g,'')}')"><i class="fa fa-arrow-right-from-bracket"></i> Exit</button>`
+  ]);
+  el.innerHTML=buildTable(['Photo','Name','Phone','Flat','Purpose','Entered','Action'],rows);
+}
+
+// ─── PHOTO ENTRY ──────────────────────────────────────
+function openPhotoCapture(){
+  const wrap=document.getElementById('_photo-modal-wrap');
+  wrap.innerHTML=`<div id="_pm" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--surface);border-radius:16px;padding:20px;max-width:360px;width:100%;text-align:center">
+      <div style="font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:14px">📷 Take Visitor Photo</div>
+      <video id="_pv" autoplay playsinline muted style="width:100%;border-radius:10px;background:#000;aspect-ratio:4/3;object-fit:cover"></video>
+      <canvas id="_pc" style="display:none"></canvas>
+      <div style="display:flex;gap:8px;margin-top:14px;justify-content:center">
+        <button class="btn btn-primary" onclick="snapPhoto()"><i class="fa fa-camera"></i> Capture</button>
+        <button class="btn btn-ghost" onclick="closePhotoModal()"><i class="fa fa-times"></i> Cancel</button>
+      </div>
+    </div></div>`;
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}}})
+    .then(s=>{ _photoCamStream=s; document.getElementById('_pv').srcObject=s; })
+    .catch(()=>{ toast('Camera Error','Use Upload Photo instead','warn'); closePhotoModal(); });
+}
+function snapPhoto(){
+  const v=document.getElementById('_pv'), c=document.getElementById('_pc');
+  // Resize to max 400x300 to keep payload small
+  const maxW=400, maxH=300;
+  const vw=v.videoWidth||640, vh=v.videoHeight||480;
+  const scale=Math.min(maxW/vw, maxH/vh, 1);
+  c.width=Math.round(vw*scale); c.height=Math.round(vh*scale);
+  c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+  _capturedPhoto=c.toDataURL('image/jpeg',0.7);
+  const p=document.getElementById('ent-photo-preview');
+  p.innerHTML=`<img src="${_capturedPhoto}" style="width:100%;height:100%;object-fit:cover">`;
+  document.getElementById('btn-take-photo').innerHTML='<i class="fa fa-camera-rotate"></i> Retake';
+  closePhotoModal();
+  toast('Photo Captured','Visitor photo saved','success');
+}
+function closePhotoModal(){
+  if(_photoCamStream){ _photoCamStream.getTracks().forEach(t=>t.stop()); _photoCamStream=null; }
+  document.getElementById('_photo-modal-wrap').innerHTML='';
+}
+function handlePhotoFile(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    // Compress uploaded photo too
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const maxW=400, maxH=300;
+      const scale=Math.min(maxW/img.width, maxH/img.height, 1);
+      canvas.width=Math.round(img.width*scale); canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      _capturedPhoto=canvas.toDataURL('image/jpeg',0.7);
+      const p=document.getElementById('ent-photo-preview');
+      p.innerHTML=`<img src="${_capturedPhoto}" style="width:100%;height:100%;object-fit:cover">`;
+      document.getElementById('btn-take-photo').innerHTML='<i class="fa fa-camera-rotate"></i> Retake';
+      toast('Photo Uploaded','','success');
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function submitEntry(){
+  const name=document.getElementById('ent-name').value.trim();
+  const flatId=document.getElementById('ent-flat').value;
+  const resultEl=document.getElementById('ent-result');
+  if(!name){toast('Required','Enter visitor name','warn');return;}
+  if(!flatId){toast('Required','Select host flat','warn');return;}
+  const body={visitorName:name,visitorPhone:document.getElementById('ent-phone').value.trim()||null,
+    vehicleNumber:document.getElementById('ent-vehicle').value.trim()||null,
+    purpose:document.getElementById('ent-purpose').value,
+    hostFlatId:+flatId, photoBase64:_capturedPhoto||null};
+  try{
+    resultEl.innerHTML=loadingEl();
+    const v=await post('/security/log-entry',body);
+    const photoHtml=v.visitorPhotoUrl?`<img src="${v.visitorPhotoUrl}" style="width:52px;height:52px;object-fit:cover;border-radius:8px;margin-right:12px;border:2px solid var(--green)">`:'';
+    resultEl.innerHTML=`<div style="background:var(--green-dim);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px;display:flex;align-items:center">
+      ${photoHtml}<div><div style="font-size:.9rem;font-weight:700;color:var(--green)">✅ Entry Logged</div>
+      <div style="font-size:.8rem;color:var(--text2);margin-top:4px"><strong>${v.visitorName}</strong> → Flat ${v.hostFlat?.flatNumber||'?'}<br>${fmtDT(v.entryTime)}</div></div></div>`;
+    toast('Entry Logged',`${v.visitorName} entered`,'success');
+    // Reset form
+    ['ent-name','ent-phone','ent-vehicle'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('ent-flat').value='';
+    document.getElementById('ent-photo-preview').innerHTML='<i class="fa fa-user" style="color:var(--muted);font-size:1.5rem"></i>';
+    document.getElementById('btn-take-photo').innerHTML='<i class="fa fa-camera"></i> Take Photo';
+    _capturedPhoto=null;
+    setTimeout(()=>{ resultEl.innerHTML=''; loadGate(); },4000);
+  }catch(e){ resultEl.innerHTML=`<div class="alert alert-err">${e.message}</div>`; toast('Error',e.message,'error'); }
+}
+
+// ─── QR CAMERA SCANNER ───────────────────────────────
+async function startQRCamera(){
+  const video=document.getElementById('cam-video');
+  const status=document.getElementById('scan-status');
+  try{
+    _camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:640},height:{ideal:480}}});
+    video.srcObject=_camStream; await video.play();
+    document.getElementById('btn-start-cam').style.display='none';
+    document.getElementById('btn-stop-cam').style.display='inline-flex';
+    status.textContent='📷 Scanning… hold QR code steady'; status.className='scan-status';
+    _scanning=true; _lastScanned=''; _processingQR=false; _lastFrameTime=0;
+    requestAnimationFrame(scanFrame);
+  }catch(e){
+    status.textContent='Camera unavailable — use Manual QR tab';
+    toast('Camera Error','Use Manual QR Entry instead','warn',5000);
+    setTimeout(()=>switchEntryMode('manual'),1200);
+  }
+}
+function stopQRCamera(){
+  _scanning=false;
+  if(_camStream){ _camStream.getTracks().forEach(t=>t.stop()); _camStream=null; }
+  const v=document.getElementById('cam-video'); if(v) v.srcObject=null;
+  document.getElementById('btn-start-cam').style.display='inline-flex';
+  document.getElementById('btn-stop-cam').style.display='none';
+  const s=document.getElementById('scan-status'); if(s) s.textContent='Point camera at QR code';
+}
+function scanFrame(ts){
+  if(!_scanning) return;
+  const video=document.getElementById('cam-video');
+  if(!video||!video.videoWidth){ requestAnimationFrame(scanFrame); return; }
+  if(ts-_lastFrameTime<66){ requestAnimationFrame(scanFrame); return; }
+  _lastFrameTime=ts;
+  const vw=video.videoWidth, vh=video.videoHeight;
+  // Crop centre square
+  const cs=Math.min(vw,vh), cx=(vw-cs)/2, cy=(vh-cs)/2;
+  _ctxSmall.drawImage(video,cx,cy,cs,cs,0,0,400,400);
+  let img=_ctxSmall.getImageData(0,0,400,400);
+  let code=jsQR(img.data,400,400,{inversionAttempts:'attemptBoth'});
+  if(!code){
+    const sh=Math.round(vh/vw*400);
+    _ctxSmall.drawImage(video,0,0,vw,vh,0,0,400,sh);
+    img=_ctxSmall.getImageData(0,0,400,sh);
+    code=jsQR(img.data,400,sh,{inversionAttempts:'attemptBoth'});
+  }
+  if(code&&code.data&&code.data!==_lastScanned&&!_processingQR){
+    _lastScanned=code.data;
+    document.getElementById('scan-status').textContent='✅ QR Detected!';
+    document.getElementById('scan-status').className='scan-status found';
+    const wrap=document.getElementById('scanner-wrap');
+    wrap.style.boxShadow='0 0 0 4px #22c55e,0 0 20px #22c55e80';
+    setTimeout(()=>{ if(wrap) wrap.style.boxShadow=''; },1500);
+    processQR(code.data,'qr-scan-result');
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+// ─── MANUAL QR ENTRY ─────────────────────────────────
+async function processManualQR(){
+  const qr=document.getElementById('manual-qr').value.trim();
+  if(!qr){toast('Missing','Enter QR code string','warn');return;}
+  await processQR(qr,'manual-result');
+}
+
+async function processQR(qrCode, resultElId){
+  if(_processingQR) return;
+  _processingQR=true;
+  const resultEl=document.getElementById(resultElId);
+  if(resultEl) resultEl.innerHTML=loadingEl();
+  const u=getUser();
+  try{
+    const v=await post(`/security/scan-qr?qrCode=${encodeURIComponent(qrCode)}&guardId=${u?.id||1}`);
+    if(resultEl) resultEl.innerHTML=`<div style="background:var(--green-dim);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:14px">
+      <div style="font-size:.9rem;font-weight:700;color:var(--green)">✅ Entry Approved</div>
+      <div style="font-size:.82rem;color:var(--text2);margin-top:6px;line-height:1.8">
+        <strong>${v.visitorName||'—'}</strong><br>${v.visitorPhone||''} · ${v.purpose||'—'}<br>
+        Flat: <strong>${v.hostFlat?v.hostFlat.flatNumber:'—'}</strong> · ${fmtDT(v.entryTime)}</div></div>`;
+    toast('Entry Logged',`${v.visitorName||'Visitor'} entered`,'success');
+    if(resultElId==='manual-result') document.getElementById('manual-qr').value='';
+    setTimeout(()=>{ if(resultEl) resultEl.innerHTML=''; _lastScanned=''; loadGate(); },5000);
+  }catch(e){
+    if(resultEl) resultEl.innerHTML=`<div style="background:var(--red-dim);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:14px">
+      <div style="font-size:.9rem;font-weight:700;color:#f87171">❌ Entry Denied</div>
+      <div style="font-size:.82rem;color:var(--muted2);margin-top:4px">${e.message}</div></div>`;
+    toast('Entry Denied',e.message,'error');
+    setTimeout(()=>{ if(resultEl) resultEl.innerHTML=''; _lastScanned=''; },5000);
+  }finally{ setTimeout(()=>{ _processingQR=false; if(_scanning){ document.getElementById('scan-status').textContent='Scanning…'; document.getElementById('scan-status').className='scan-status'; }},3000); }
+}
+
+// ─── EXIT ─────────────────────────────────────────────
+async function processExit(){
+  const id=document.getElementById('exit-id').value;
+  const resultEl=document.getElementById('exit-result');
+  if(!id){toast('Missing','Enter visitor ID or select from dropdown','warn');return;}
+  try{
+    const v=await post(`/security/exit/${id}`);
+    resultEl.innerHTML=`<div class="alert alert-ok"><i class="fa fa-check"></i> ${v.visitorName||'Visitor'} exited at ${fmtDT(v.exitTime)}</div>`;
+    document.getElementById('exit-id').value='';
+    toast('Exit Logged',`${v.visitorName||'Visitor'} has exited`,'success');
+    setTimeout(()=>{ resultEl.innerHTML=''; loadGate(); },3000);
+  }catch(e){ resultEl.innerHTML=`<div class="alert alert-err">${e.message}</div>`; toast('Error',e.message,'error'); }
+}
+async function quickExit(id,name){
+  try{ const v=await post(`/security/exit/${id}`); toast('Exit',`${name} exited`,'success'); loadGate(); }
+  catch(e){ toast('Error',e.message,'error'); }
+}
+
+// ─── INSIDE PAGE ──────────────────────────────────────
+async function loadInside(){
+  const el=document.getElementById('inside-tbl');
+  try{
+    const data=await get('/security/current-visitors')||[];
+    const inside=data.filter(v=>v.status==='INSIDE');
+    const rows=inside.map(v=>[
+      v.visitorPhotoUrl?`<img src="${v.visitorPhotoUrl}" class="photo-thumb" onclick="viewPhoto('${v.visitorPhotoUrl}','${(v.visitorName||'').replace(/'/g,'')}')">`
+        :`<div style="width:40px;height:40px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center"><i class="fa fa-user" style="color:var(--muted)"></i></div>`,
+      `<strong>${v.visitorName||'—'}</strong>`, v.visitorPhone||'—',
+      v.hostFlat?`<span class="mono">Flat ${v.hostFlat.flatNumber}</span>`:'—',
+      v.purpose||'—', fmtDT(v.entryTime),
+      `<button class="btn btn-danger btn-xs" onclick="quickExit(${v.id},'${(v.visitorName||'').replace(/'/g,'')}')"><i class="fa fa-arrow-right-from-bracket"></i> Exit</button>`
+    ]);
+    el.innerHTML=buildTable(['Photo','Name','Phone','Flat','Purpose','Entered','Action'],rows,'No visitors inside');
+  }catch(e){ el.innerHTML=`<div class="alert alert-err">${e.message}</div>`; }
+}
+
+// ─── LOG PAGE ─────────────────────────────────────────
+async function loadLog(){
+  const el=document.getElementById('log-tbl');
+  try{
+    _allLog=await get('/security/all-visitors')||[];
+    const setT=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+    setT('lg-total',_allLog.length);
+    setT('lg-inside',_allLog.filter(v=>v.status==='INSIDE').length);
+    setT('lg-exited',_allLog.filter(v=>v.status==='EXITED').length);
+    setT('lg-pending',_allLog.filter(v=>v.status==='PENDING').length);
+    filterLog._status='ALL'; renderLog(_allLog);
+  }catch(e){ el.innerHTML=`<div class="alert alert-err">${e.message}</div>`; }
+}
+function renderLog(data){
+  const rows=data.map(v=>[
+    v.visitorPhotoUrl?`<img src="${v.visitorPhotoUrl}" class="photo-thumb" onclick="viewPhoto('${v.visitorPhotoUrl}','${(v.visitorName||'').replace(/'/g,'')}')">`
+      :`<div style="width:40px;height:40px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center"><i class="fa fa-user" style="color:var(--muted)"></i></div>`,
+    `<strong>${v.visitorName||'—'}</strong>`, v.visitorPhone||'—',
+    v.hostFlat?`<span class="mono">Flat ${v.hostFlat.flatNumber}</span>`:'—',
+    v.purpose||'—', badge(v.status||'PENDING'), fmtDT(v.entryTime), fmtDT(v.exitTime),
+    v.status==='INSIDE'?`<button class="btn btn-danger btn-xs" onclick="quickExit(${v.id},'${(v.visitorName||'').replace(/'/g,'')}')"><i class="fa fa-arrow-right-from-bracket"></i> Exit</button>`:'—'
+  ]);
+  document.getElementById('log-tbl').innerHTML=buildTable(['Photo','Name','Phone','Flat','Purpose','Status','Entry','Exit','Action'],rows,'No records');
+}
+function filterLog(s,btn){
+  if(btn){ document.querySelectorAll('#log-tabs .tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); filterLog._status=s; }
+  const st=filterLog._status||'ALL';
+  const q=(document.getElementById('log-search')?.value||'').toLowerCase();
+  let d=st==='ALL'?_allLog:_allLog.filter(v=>v.status===st);
+  if(q) d=d.filter(v=>(v.visitorName||'').toLowerCase().includes(q)||(v.visitorPhone||'').includes(q)||(v.hostFlat?.flatNumber||'').toLowerCase().includes(q)||(v.purpose||'').toLowerCase().includes(q));
+  renderLog(d);
+}
+
+// ─── PHOTO VIEWER ─────────────────────────────────────
+function viewPhoto(src,name){
+  document.getElementById('photo-viewer-img').src=src;
+  document.getElementById('photo-viewer-name').textContent=name||'Visitor Photo';
+  document.getElementById('photo-viewer').style.display='flex';
+}
+
+// ─── PROFILE ──────────────────────────────────────────
+async function loadProfile(){
+  try{ const u=await get('/profile')||getUser(); document.getElementById('sp-name').value=u.fullName||''; document.getElementById('sp-phone').value=u.phone||''; }
+  catch(e){}
+}
+async function saveProfile(){
+  try{ await patch('/profile',{fullName:document.getElementById('sp-name').value.trim(),phone:document.getElementById('sp-phone').value.trim()}); toast('Saved','Profile updated','success'); }
+  catch(e){ toast('Error',e.message,'error'); }
+}
+async function changePassword(){
+  const cur=document.getElementById('sp-cur').value, nw=document.getElementById('sp-new').value;
+  const el=document.getElementById('sp-msg');
+  try{ await patch('/profile/change-password',{currentPassword:cur,newPassword:nw}); ['sp-cur','sp-new'].forEach(id=>document.getElementById(id).value=''); el.innerHTML='<div class="alert alert-ok">Password changed</div>'; setTimeout(()=>el.innerHTML='',3000); }
+  catch(e){ el.innerHTML=`<div class="alert alert-err">${e.message}</div>`; }
+}
+
+// Init
+loadGate();
+setInterval(loadGate, 30000);
+</script>
+</body></html>

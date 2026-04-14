@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SmartRes — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#070910;--surface:rgba(255,255,255,.045);--raised:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --blue:#6366f1;--blue-hi:#818cf8;--blue-lo:rgba(99,102,241,.15);
+  --green:#10b981;--red:#ef4444;
+  --text:#e8eaf6;--text2:rgba(232,234,246,.6);--muted:rgba(232,234,246,.35);
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
+body{display:flex;position:relative}
+
+/* Background */
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.bg-grad{position:absolute;inset:0;
+  background:radial-gradient(ellipse 800px 560px at -5% 42%,rgba(40,40,200,.22) 0%,transparent 68%),
+  radial-gradient(ellipse 600px 500px at 108% 8%,rgba(20,20,160,.17) 0%,transparent 65%),
+  radial-gradient(ellipse 450px 380px at 55% 108%,rgba(70,20,180,.13) 0%,transparent 65%)}
+.bg-grid{position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:64px 64px}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);pointer-events:none}
+.o1{width:700px;height:700px;background:radial-gradient(circle,rgba(80,80,255,.32) 0%,transparent 60%);top:-220px;left:-200px;animation:drift1 20s ease-in-out infinite alternate}
+.o2{width:550px;height:550px;background:radial-gradient(circle,rgba(0,160,110,.22) 0%,transparent 60%);bottom:-120px;right:28%;animation:drift2 25s ease-in-out infinite alternate}
+.o3{width:400px;height:400px;background:radial-gradient(circle,rgba(120,40,230,.2) 0%,transparent 60%);top:38%;right:-90px;animation:drift3 22s ease-in-out infinite alternate}
+@keyframes drift1{0%{transform:translate(0,0) scale(1)}100%{transform:translate(55px,38px) scale(1.1)}}
+@keyframes drift2{0%{transform:translate(0,0)}100%{transform:translate(-40px,50px) scale(1.08)}}
+@keyframes drift3{0%{transform:translate(0,0)}100%{transform:translate(35px,-45px) scale(1.12)}}
+
+/* Layout */
+.page{position:relative;z-index:1;display:flex;width:100%;min-height:100vh}
+
+/* LEFT */
+.L{flex:1;display:flex;flex-direction:column;padding:52px 60px;justify-content:space-between;border-right:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--blue),#a78bfa);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  box-shadow:0 0 0 1px rgba(99,102,241,.4),0 8px 28px rgba(99,102,241,.38)}
+.logo-name{font-family:'Outfit',sans-serif;font-size:1.2rem;font-weight:800;letter-spacing:-.03em;color:#fff}
+.logo-name span{color:#a78bfa}
+.hero{max-width:500px}
+.pill{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(99,102,241,.3);
+  background:rgba(99,102,241,.1);border-radius:100px;padding:5px 14px 5px 9px;
+  margin-bottom:26px;font-size:.7rem;font-weight:700;color:rgba(180,185,255,.88);
+  letter-spacing:.09em;text-transform:uppercase}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(1.8)}}
+h1{font-family:'Outfit',sans-serif;font-size:clamp(2.4rem,3.6vw,3.8rem);font-weight:900;
+  line-height:1.03;letter-spacing:-.05em;color:#fff;margin-bottom:18px}
+.grad-text{background:linear-gradient(125deg,var(--blue-hi) 0%,#a78bfa 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:1rem;color:var(--text2);line-height:1.78;margin-bottom:42px;max-width:400px}
+.features{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:8px}
+.feat{display:flex;align-items:flex-start;gap:12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 15px;transition:all .2s}
+.feat:hover{background:var(--raised);border-color:var(--border2)}
+.feat-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.88rem;flex-shrink:0}
+.feat-ic.b{background:rgba(99,102,241,.18)} .feat-ic.g{background:rgba(16,185,129,.13)}
+.feat-ic.a{background:rgba(245,158,11,.13)} .feat-ic.r{background:rgba(239,68,68,.12)}
+.feat-name{font-size:.81rem;font-weight:700;color:var(--text);margin-bottom:2px}
+.feat-desc{font-size:.71rem;color:var(--muted);line-height:1.45}
+.metrics{display:flex;gap:40px}
+.met-val{font-family:'Outfit',sans-serif;font-size:1.6rem;font-weight:900;color:#fff;line-height:1}
+.met-lbl{font-size:.7rem;color:var(--muted);margin-top:4px}
+
+/* RIGHT */
+.R{width:460px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  padding:36px;background:rgba(6,8,16,.65);backdrop-filter:blur(24px);border-left:1px solid var(--border)}
+.box{width:100%;max-width:360px}
+.box-title{font-family:'Outfit',sans-serif;font-size:1.8rem;font-weight:800;color:#fff;letter-spacing:-.04em;margin-bottom:4px}
+.box-sub{font-size:.87rem;color:var(--text2);margin-bottom:28px}
+
+/* Alert */
+#alert{display:none;align-items:center;gap:9px;padding:10px 13px;border-radius:9px;font-size:.81rem;margin-bottom:16px}
+#alert.show{display:flex}
+#alert.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.22);color:#f87171}
+#alert.ok{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:#34d399}
+
+/* Fields */
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:.7rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.iw{position:relative}
+.iw-ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.35;font-size:.82rem;pointer-events:none}
+input[type=email],input[type=password],input[type=text]{width:100%;padding:10px 11px 10px 35px;
+  background:rgba(255,255,255,.055);border:1px solid var(--border);border-radius:9px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.87rem;outline:none;
+  transition:border-color .16s,background .16s,box-shadow .16s;-webkit-appearance:none}
+input::placeholder{color:var(--muted)}
+input:focus{background:rgba(255,255,255,.08);border-color:var(--blue);box-shadow:0 0 0 3px rgba(99,102,241,.16)}
+.eye-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;
+  font-size:.82rem;transition:color .16s;display:flex;align-items:center}
+.eye-btn:hover{color:var(--text2)}
+
+/* Remember / forgot */
+.fmeta{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.rem{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--text2);cursor:pointer}
+.rem input{accent-color:var(--blue);width:14px;height:14px}
+.lnk{font-size:.82rem;color:var(--blue-hi);text-decoration:none;font-weight:600}
+.lnk:hover{color:#a78bfa}
+
+/* Submit */
+.submit{width:100%;padding:11px;border:none;border-radius:9px;cursor:pointer;
+  background:linear-gradient(135deg,var(--blue),#7c3aed);color:#fff;
+  font-family:'Outfit',sans-serif;font-size:.91rem;font-weight:700;
+  box-shadow:0 4px 22px rgba(99,102,241,.4),inset 0 1px 0 rgba(255,255,255,.12);
+  transition:transform .16s,box-shadow .16s;position:relative;overflow:hidden}
+.submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 30px rgba(99,102,241,.52)}
+.submit:disabled{opacity:.5;cursor:not-allowed}
+.btn-inner{display:flex;align-items:center;justify-content:center;gap:8px}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;
+  border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hn{display:none!important}
+
+/* Divider */
+.divider{display:flex;align-items:center;gap:11px;margin:20px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:.72rem;color:var(--muted)}
+
+/* Demo accounts */
+.demo-label{font-size:.7rem;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:9px}
+.demo-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.demo-btn{padding:10px 12px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text2);font-family:'DM Sans',sans-serif;
+  font-size:.79rem;font-weight:600;cursor:pointer;transition:all .16s;text-align:left;line-height:1}
+.demo-btn:hover{background:var(--raised);border-color:var(--border2);color:var(--text)}
+.role-tag{display:block;font-size:.61rem;letter-spacing:.1em;font-weight:800;text-transform:uppercase;margin-bottom:4px}
+.role-tag.admin{color:#f87171} .role-tag.resident{color:var(--blue-hi)}
+.role-tag.security{color:#34d399} .role-tag.provider{color:#fbbf24}
+
+/* Animations */
+@keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.a0{animation:up .55s cubic-bezier(.16,1,.3,1) both}
+.a1{animation:up .55s cubic-bezier(.16,1,.3,1) .08s both}
+.a2{animation:up .55s cubic-bezier(.16,1,.3,1) .16s both}
+.a3{animation:up .55s cubic-bezier(.16,1,.3,1) .24s both}
+.a4{animation:up .55s cubic-bezier(.16,1,.3,1) .32s both}
+.a5{animation:up .55s cubic-bezier(.16,1,.3,1) .40s both}
+
+@media(max-width:920px){.L{display:none}.R{width:100%;border-left:none}}
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="bg-grad"></div><div class="bg-grid"></div>
+  <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+</div>
+
+<div class="page">
+  <!-- LEFT panel -->
+  <div class="L">
+    <div class="logo a0">
+      <div class="logo-mark">🏙</div>
+      <div class="logo-name">Smart<span>Res</span></div>
+    </div>
+
+    <div class="hero">
+      <div class="pill a1"><span class="pulse"></span>AI-Powered Platform · 2025</div>
+      <h1 class="a2">Intelligent<br><span class="grad-text">Living, Reimagined</span></h1>
+      <p class="hero-sub a3">End-to-end residential management powered by machine learning — from anomaly detection to automated billing.</p>
+      <div class="features a4">
+        <div class="feat"><div class="feat-ic b">⚡</div><div><div class="feat-name">AI Anomaly Detection</div><div class="feat-desc">Isolation Forest ML monitoring</div></div></div>
+        <div class="feat"><div class="feat-ic g">📱</div><div><div class="feat-name">QR Visitor Gate</div><div class="feat-desc">Contactless entry with camera scan</div></div></div>
+        <div class="feat"><div class="feat-ic a">💰</div><div><div class="feat-name">Smart Billing Engine</div><div class="feat-desc">Auto-invoicing with PDF export</div></div></div>
+        <div class="feat"><div class="feat-ic r">🤖</div><div><div class="feat-name">AI Resident Assistant</div><div class="feat-desc">24/7 intelligent NLP chatbot</div></div></div>
+      </div>
+    </div>
+
+    <div class="metrics a5">
+      <div><div class="met-val">99.9%</div><div class="met-lbl">Uptime SLA</div></div>
+      <div><div class="met-val">&lt;200ms</div><div class="met-lbl">API Latency</div></div>
+      <div><div class="met-val">AES-256</div><div class="met-lbl">Encryption</div></div>
+    </div>
+  </div>
+
+  <!-- RIGHT login panel -->
+  <div class="R">
+    <div class="box a1">
+      <div class="box-title">Welcome back</div>
+      <div class="box-sub">Sign in to your SmartRes workspace</div>
+
+      <div id="alert">
+        <i class="fa fa-circle-exclamation" id="alert-icon"></i>
+        <span id="alert-msg"></span>
+      </div>
+
+      <form id="form" novalidate>
+        <div class="fg">
+          <label>Email address</label>
+          <div class="iw">
+            <span class="iw-ic">✉</span>
+            <input type="email" id="em" placeholder="you@smartres.com" autocomplete="email">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Password</label>
+          <div class="iw">
+            <span class="iw-ic">🔒</span>
+            <input type="password" id="pw" placeholder="Your password" autocomplete="current-password">
+            <button type="button" class="eye-btn" id="eye" onclick="togglePw()">👁</button>
+          </div>
+        </div>
+        <div class="fmeta">
+          <label class="rem"><input type="checkbox" id="rem"> Keep me signed in</label>
+          <a href="#" class="lnk">Forgot password?</a>
+        </div>
+        <button class="submit" type="submit" id="submit-btn">
+          <div class="btn-inner" id="btn-text">Sign in to SmartRes</div>
+          <div class="btn-inner hn" id="btn-load"><div class="spinner"></div>Authenticating…</div>
+        </button>
+      </form>
+
+      <div class="divider"><span>or try a demo account</span></div>
+      <div class="demo-label">Select role to auto-fill credentials</div>
+      <div class="demo-grid">
+        <button class="demo-btn" onclick="fill('admin@smartresidency.com','admin123')"><span class="role-tag admin">Admin</span>System Admin</button>
+        <button class="demo-btn" onclick="fill('rajesh@example.com','resident123')"><span class="role-tag resident">Resident</span>Rajesh Kumar</button>
+        <button class="demo-btn" onclick="fill('guard@smartresidency.com','resident123')"><span class="role-tag security">Security</span>Gate Guard</button>
+        <button class="demo-btn" onclick="fill('plumber@smartresidency.com','resident123')"><span class="role-tag provider">Provider</span>Plumber Ram</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+const ROLE_MAP = {
+  ROLE_ADMIN:'admin/dashboard.html',
+  ROLE_RESIDENT:'resident/dashboard.html',
+  ROLE_SECURITY:'security/dashboard.html',
+  ROLE_SERVICE_PROVIDER:'service-provider/dashboard.html'
+};
+
+// Already logged in? Redirect immediately.
+try {
+  const t=localStorage.getItem('srToken'), u=localStorage.getItem('srUser');
+  if(t&&u){ const p=JSON.parse(u); window.location.href=ROLE_MAP[p.role]||'resident/dashboard.html'; }
+} catch(e) {}
+
+function togglePw(){
+  const i=document.getElementById('pw');
+  i.type=i.type==='password'?'text':'password';
+}
+
+function fill(email,pass){
+  document.getElementById('em').value=email;
+  document.getElementById('pw').value=pass;
+}
+
+function showAlert(msg, type){
+  const el=document.getElementById('alert');
+  document.getElementById('alert-msg').textContent=msg;
+  el.className=type+' show';
+}
+function hideAlert(){ document.getElementById('alert').className=''; }
+
+function setLoading(on){
+  document.getElementById('submit-btn').disabled=on;
+  document.getElementById('btn-text').classList.toggle('hn',on);
+  document.getElementById('btn-load').classList.toggle('hn',!on);
+}
+
+document.getElementById('form').onsubmit = async e => {
+  e.preventDefault();
+  const email=document.getElementById('em').value.trim();
+  const pass=document.getElementById('pw').value;
+  if(!email||!pass){ showAlert('Please enter your email and password.','err'); return; }
+
+  setLoading(true); hideAlert();
+  try {
+    const res = await fetch('http://localhost:8081/api/auth/login', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email, password:pass})
+    });
+    const data = await res.json();
+    if(!res.ok){ showAlert(data.message||'Invalid credentials. Please try again.','err'); return; }
+
+    localStorage.setItem('srToken', data.token);
+    localStorage.setItem('srUser', JSON.stringify(data.user));
+
+    showAlert('Authenticated! Redirecting…','ok');
+    setTimeout(()=> window.location.href = ROLE_MAP[data.user.role]||'resident/dashboard.html', 600);
+  } catch(err) {
+    showAlert('Cannot connect to server. Make sure backend is running on port 8081.','err');
+  } finally {
+    setLoading(false);
+  }
+};
+</script>
+</body>
+</html>
