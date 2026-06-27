@@ -48,7 +48,7 @@ A full-stack, production-ready web application for residential society managemen
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Tech stack
 
 | Layer | Technology |
 |-------|-----------|
