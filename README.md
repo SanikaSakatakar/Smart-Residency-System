@@ -4,7 +4,7 @@ A full-stack, production-ready web application for residential society managemen
 
 ---
 
-##  Features Of Project
+##  Features Of the Project
 
 ### 👑 Admin Portal
 - **Dashboard** — live stats (residents, flats, visitors inside now, open complaints, amenity bookings)
@@ -48,7 +48,7 @@ A full-stack, production-ready web application for residential society managemen
 
 ---
 
-## 🛠 Tech stack
+## 🛠 Tech stack used
 
 | Layer | Technology |
 |-------|-----------|
