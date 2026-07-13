@@ -82,7 +82,7 @@ spring:
     password: YOUR_MYSQL_PASSWORD
 ```
 
-### 3. Configure AI (Optional but Recommended)
+### 3.Configure AI (Optional but Recommended)
 Set environment variable before starting:
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-api03-...
