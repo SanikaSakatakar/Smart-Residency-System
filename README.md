@@ -4,8 +4,7 @@ A full-stack, production-ready web application for residential society managemen
 
 ---
 
-##  Features of the project
-
+##  Features 
 ### 👑 Admin Portal
 - **Dashboard** — live stats (residents, flats, visitors inside now, open complaints, amenity bookings)
 - **User Management** — add residents/staff/providers, activate/deactivate accounts
