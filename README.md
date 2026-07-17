@@ -37,7 +37,7 @@ A full-stack, production-ready web application for residential society managemen
 - **Full Entry Log** — search by name/flat/phone, filter by status, photo thumbnails
 - **Profile Management** — update details, change password
 
-### 🔧 Service Provider  Portal
+### 🔧Service Provider  Portal
 - **My Tasks** — unified view: complaints + service requests, sorted by priority
 - **Priority sorting** — CRITICAL → HIGH → MEDIUM → LOW
 - **Start/Resolve workflow** — start task → resolve with notes
