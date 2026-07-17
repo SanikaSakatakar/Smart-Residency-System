@@ -27,7 +27,7 @@ A full-stack, production-ready web application for residential society managemen
 - **AI Chatbot** — ask anything about society rules, maintenance, amenities
 - **Profile Management** — update name, phone, profile photo, change password
 
-### 🛡 Security Portal (Gate Guard)
+### 🛡Security Portal (Gate Guard)
 - **Three Entry Modes:**
   - 📷 **Photo Entry** — fill visitor form + take/upload photo → instantly logged
   - 📱 **QR Camera Scan** — live 15fps optimised camera scan (jsQR)
