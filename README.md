@@ -59,7 +59,7 @@ A full-stack, production-ready web application for residential society managemen
 
 ---
 
-## ⚡Quick Start the project
+## ⚡Quick Start of the project
 
 ### Prerequisites
 - Java 21+
