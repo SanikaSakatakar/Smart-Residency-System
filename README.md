@@ -93,7 +93,7 @@ anthropic:
 ```
 > **Without this key**: AI analytics and chatbot return a helpful message explaining what's needed. All other features work normally.
 
-### 4. Build & Run
+### 4.Build & Run
 ```bash
 cd backend
 mvn package -DskipTests
