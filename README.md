@@ -1,6 +1,6 @@
 # 🏢 Smart Residency Management System
 
-A full-stack, production-ready web application for residential society management. Built with Spring Boot, vanilla JS, and Claude AI — designed as a professional portfolio/resume project.
+A full-stack, production-ready web application for residential society management. Built with Spring Boot, vanilla JS, and Claude AI — designed as a professional portfolio/resume project
 
 ---
 
