@@ -17,7 +17,7 @@ A full-stack, production-ready web application for residential society managemen
 - **SOS Broadcast** — emergency alert posted instantly to notice board
 - **AI Analytics** — Claude-powered analysis: complaints, occupancy, visitor patterns, amenity usage + free-form Q&A
 
-### 🏠 Resident Portal
+### 🏠 Resident  Portal
 - **Home Dashboard** — greeting, quick stats, notice preview, active visitor cards
 - **Notice Board** — read all society announcements, pinned notices at top
 - **Amenity Booking** — browse facilities, pick date, select available slot (clash-checked), cancel bookings
